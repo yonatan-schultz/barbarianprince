@@ -9,12 +9,14 @@ You are Cal Arath, a deposed prince. You have **70 days** to accumulate **500 go
 This project implements the full game in a playable terminal interface, including:
 
 - Full 25×24 hex map with terrain, settlements, ruins, castles, and temples
-- Travel system with lost checks, river crossings, and road bonuses
+- Travel system with lost checks, river crossings (requires raft), and road bonuses
 - Combat with wound penalties, followers, special weapons, and undead modifiers
 - ~170 random events (wilderness encounters, NPCs, treasures, audience/temple mechanics)
 - 15 special possessions (Ring of Command, Magic Sword, Elven Boots, etc.)
 - Win/lose conditions, food economy, follower wages, and starvation
-- Save/load support
+- True Love mechanics — loyal companion with special desertion immunity and W&W bonus
+- Save/load support (single slot, `~/.barbarianprince/save.json`)
+- Interactive tutorial for new players
 
 ## Running
 
