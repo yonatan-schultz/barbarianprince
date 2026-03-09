@@ -9,6 +9,28 @@ import (
 )
 
 const saveVersion = 1
+const tutorialDoneMarker = "tutorial_done"
+
+// TutorialCompleted reports whether the player has completed the tutorial before.
+func TutorialCompleted() bool {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(filepath.Join(home, ".barbarianprince", tutorialDoneMarker))
+	return err == nil
+}
+
+// MarkTutorialComplete records that the tutorial has been finished.
+func MarkTutorialComplete() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	dir := filepath.Join(home, ".barbarianprince")
+	_ = os.MkdirAll(dir, 0755)
+	_ = os.WriteFile(filepath.Join(dir, tutorialDoneMarker), []byte("done"), 0644)
+}
 
 // SaveFile wraps GameState with a version for forward-compatibility checks
 type SaveFile struct {

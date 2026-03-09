@@ -98,22 +98,20 @@ barbarianprince/
 
 ## Future Work (Post-MVP)
 
-### 🔲 Tutorial Mode
-Interactive guided introduction for new players. Runs before the main game (or can be selected from a start menu). Implemented as a scripted event sequence layered over the normal game engine — no separate code path.
+### ✅ Tutorial Mode
+Interactive guided introduction for new players. Runs before the main game (or can be selected from a start menu).
 
-**Scope:**
-- Scripted first ~5 turns with narrative guidance overlaid on the normal UI
-- A `TutorialStep` struct: `{message, highlightAction, autoAdvance bool}`
-- Steps walk through: moving to an adjacent hex → triggering a safe event → buying food → resting to heal → first combat (vs a weak enemy, pre-seeded)
-- A persistent "hint" bar below the menu panel showing the current tutorial goal
-- Skippable at any time with `[S]kip Tutorial`
-- State stored in `GameState.Tutorial *TutorialState` (nil when not in tutorial)
-- Tutorial flag persisted so returning players skip it by default; `--tutorial` CLI flag forces it
+**Implemented:**
+- 18-slide reference guide (`ui/tutorial.go`) shown in the menu panel before gameplay
+- In-game hint bar (4 guided steps: buy food → travel → see event → rest) stored in `GameState.Tutorial *TutorialState`
+- Hint displayed at top of action menu while tutorial is active
+- Skippable at any time with `[X]` Skip
+- Completion persisted in `~/.barbarianprince/tutorial_done` — returning players skip hints by default
+- `--tutorial` CLI flag forces in-game hints even after completion
+- `game/tutorial_state.go` contains all TutorialState logic; `ui/tutorial.go` contains slide text
 
-**Implementation notes:**
-- Pre-seed RNG for tutorial turns so events are deterministic
-- Tutorial ends after step 5 or on skip; game continues normally from that state
-- All tutorial text lives in `game/tutorial.go` for easy editing
+**Not yet implemented:**
+- Pre-seeded RNG for deterministic tutorial encounters
 
 ### ✅ Save / Load Game
 - JSON serialization of `GameState` to `~/.barbarianprince/save.json`

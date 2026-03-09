@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"barbarianprince/game"
 )
@@ -97,7 +98,7 @@ func RenderMap(state *game.GameState, width, height int, highlightHex ...game.He
 		rows = append(rows, line.String())
 
 		// Tragoth River: horizontal separator between rows 2 and 3
-		if row == game.TragotheRow-1 && len(rows) < height {
+		if row == game.TragotheRow-1 {
 			var sep strings.Builder
 			sep.WriteString("   ")
 			for col := startCol; col < startCol+hexCols && col <= mapCols; col++ {
@@ -107,9 +108,30 @@ func RenderMap(state *game.GameState, width, height int, highlightHex ...game.He
 		}
 	}
 
-	// Hex info line at the bottom when a travel target is highlighted
+	// Hex info line at the bottom when a travel target is highlighted.
+	// Truncate to map width so lipgloss's word-wrap (triggered by Width())
+	// never splits it into two lines, which would make the panel 1 row taller.
 	if highlight != "" {
-		rows = append(rows, hexInfoLine(highlight))
+		info := hexInfoLine(highlight)
+		info = ansi.Truncate(info, width, "")
+		rows = append(rows, info)
+	}
+
+	// Enforce exactly height lines so the panel never overflows or underflows.
+	// The Tragoth separator can add one extra line; trim it from the hex rows
+	// (never the header at index 0 or the info line at the end).
+	for len(rows) > height {
+		if highlight != "" && len(rows) >= 2 {
+			// Remove the last hex row, keeping the info line at the bottom.
+			infoLine := rows[len(rows)-1]
+			rows = rows[:len(rows)-2]
+			rows = append(rows, infoLine)
+		} else {
+			rows = rows[:len(rows)-1]
+		}
+	}
+	for len(rows) < height {
+		rows = append(rows, "")
 	}
 
 	return strings.Join(rows, "\n")

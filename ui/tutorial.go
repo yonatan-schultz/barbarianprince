@@ -35,8 +35,10 @@ Unnamed structures show a symbol:
   [R] Ruins   [+] Temple  [v] Village
 
 Other symbols:
-  [*] You   >>> Travel target   ~~~~ River
-  =   Road (brown separator between hexes)
+  [*]  You (current position)
+  >>>  Travel target
+  ~~~~ River
+  =    Road (brown, between hexes)
 
 Terrain (affects travel safety & food):
   . Farmland   ~ Countryside   f Forest

@@ -68,6 +68,9 @@ type GameState struct {
 	LodgingHex HexID
 
 	FieldNotes []Note `json:"fieldNotes,omitempty"`
+
+	// Tutorial tracks in-game guided tutorial progress. Nil when inactive.
+	Tutorial *TutorialState `json:"tutorial,omitempty"`
 }
 
 // NewGameState creates a fresh game state

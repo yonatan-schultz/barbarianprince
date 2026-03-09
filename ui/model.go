@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"barbarianprince/game"
 )
@@ -21,32 +22,36 @@ const (
 
 // Model is the bubbletea model
 type Model struct {
-	ui           uiPhase
-	state        *game.GameState
-	width        int
-	height       int
-	travelIndex  int               // selected hex when traveling
-	neighbors    []game.HexID      // current travel options
-	eventResult  *game.EventResult // pending event with choices
-	combatDone   bool
-	saveMsg      string            // transient feedback message (save ok/err)
-	startOpts    []string          // start menu options
-	startIndex   int               // cursor on start menu
-	notesScroll  int               // scroll offset for field notes panel
-	tutorialStep int               // -1 = no tutorial; 0..N = active slide
-	quitConfirm  bool             // true = waiting for second Q to confirm quit
+	ui             uiPhase
+	state          *game.GameState
+	width          int
+	height         int
+	travelIndex    int               // selected hex when traveling
+	neighbors      []game.HexID      // current travel options
+	eventResult    *game.EventResult // pending event with choices
+	combatDone     bool
+	saveMsg        string            // transient feedback message (save ok/err)
+	startOpts      []string          // start menu options
+	startIndex     int               // cursor on start menu
+	notesScroll    int               // scroll offset for field notes panel
+	tutorialStep   int               // -1 = no tutorial; 0..N = active slide
+	isTutorialGame bool              // true when started via Tutorial option
+	quitConfirm    bool              // true = waiting for second Q to confirm quit
 }
 
-// NewModel creates a new UI model starting at the title screen
-func NewModel() Model {
+// NewModel creates a new UI model starting at the title screen.
+// forceTutorial enables in-game tutorial hints even if the player has completed
+// the tutorial before (mirrors the --tutorial CLI flag).
+func NewModel(forceTutorial bool) Model {
 	opts := []string{"New Game", "Tutorial"}
 	if game.SaveExists() {
 		opts = append(opts, "Continue")
 	}
 	return Model{
-		ui:           uiPhaseStartMenu,
-		startOpts:    opts,
-		tutorialStep: -1,
+		ui:             uiPhaseStartMenu,
+		startOpts:      opts,
+		tutorialStep:   -1,
+		isTutorialGame: forceTutorial,
 	}
 }
 
@@ -104,6 +109,12 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "esc":
 			m.tutorialStep = len(tutorialSteps) // skip to end
 		}
+		// Slideshow just finished — activate in-game hints if this is a tutorial game
+		if m.tutorialStep >= len(tutorialSteps) && m.isTutorialGame && m.state != nil {
+			if !game.TutorialCompleted() {
+				m.state.Tutorial = game.NewTutorialState()
+			}
+		}
 		return m, nil
 	}
 
@@ -134,6 +145,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.state = nil
 			m.eventResult = nil
 			m.tutorialStep = -1
+			m.isTutorialGame = false
 		}
 		return m, nil
 	}
@@ -160,8 +172,30 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m.handleActionKey(key)
 }
 
+// advanceTutorial calls OnAction on the active tutorial and marks it complete
+// when all steps are done.
+func (m *Model) advanceTutorial(a game.Action) {
+	if m.state == nil || m.state.Tutorial == nil {
+		return
+	}
+	m.state.Tutorial.OnAction(a)
+	if !m.state.Tutorial.IsActive() {
+		game.MarkTutorialComplete()
+		m.state.AddLog("Tutorial complete! Good luck, Cal Arath.")
+		m.state.Tutorial = nil
+	}
+}
+
 func (m Model) handleActionKey(key string) (tea.Model, tea.Cmd) {
 	s := m.state
+
+	// Skip tutorial hint
+	if (key == "x" || key == "X") && s.Tutorial != nil {
+		s.Tutorial.Skip()
+		s.Tutorial = nil
+		s.AddLog("Tutorial skipped.")
+		return m, nil
+	}
 
 	switch key {
 	case "t", "T":
@@ -184,19 +218,23 @@ func (m Model) handleActionKey(key string) (tea.Model, tea.Cmd) {
 
 	case "r", "R":
 		game.ExecuteAction(s, game.ActionRest)
+		m.advanceTutorial(game.ActionRest)
 
 	case "n", "N":
 		if er := game.ExecuteAction(s, game.ActionSeekNews); er != nil {
 			return m.storeActionResult(er), nil
 		}
+		m.advanceTutorial(game.ActionSeekNews)
 
 	case "h", "H":
 		if er := game.ExecuteAction(s, game.ActionSeekFollowers); er != nil {
 			return m.storeActionResult(er), nil
 		}
+		m.advanceTutorial(game.ActionSeekFollowers)
 
 	case "b", "B":
 		game.ExecuteAction(s, game.ActionBuyFood)
+		m.advanceTutorial(game.ActionBuyFood)
 
 	case "a", "A":
 		if er := game.ExecuteAction(s, game.ActionSeekAudience); er != nil {
@@ -315,10 +353,15 @@ func (m Model) startMenuConfirm() (tea.Model, tea.Cmd) {
 		m.tutorialStep = -1
 		m.eventResult = nil
 		m.saveMsg = ""
+		// --tutorial flag: activate in-game hints directly (skip slideshow)
+		if m.isTutorialGame && !game.TutorialCompleted() {
+			m.state.Tutorial = game.NewTutorialState()
+		}
 	case "Tutorial":
 		m.state = game.NewGameState()
 		m.ui = uiPhasePlaying
 		m.tutorialStep = 0
+		m.isTutorialGame = true
 		m.eventResult = nil
 		m.saveMsg = ""
 	case "Continue":
@@ -376,6 +419,16 @@ func (m Model) handleTravelKey(key string) (tea.Model, tea.Cmd) {
 			}
 
 			s.RemainingTravelHops--
+
+			// Advance tutorial on successful travel
+			if result.Success && s.Tutorial != nil {
+				s.Tutorial.OnTravel()
+				if !s.Tutorial.IsActive() {
+					game.MarkTutorialComplete()
+					s.AddLog("Tutorial complete! Good luck, Cal Arath.")
+					s.Tutorial = nil
+				}
+			}
 
 			// If successful and hops remain (mounted second hop), offer another move
 			if result.Success && s.RemainingTravelHops > 0 && !result.HasEvent {
@@ -603,6 +656,17 @@ func (m Model) View() string {
 	if m.width >= 120 {
 		rightWidth = 44
 	}
+	// Tutorial slideshow needs more width to avoid wrapping the pre-formatted text.
+	// Expand the right panel up to 54 chars, leaving at least 22 chars for the map.
+	if m.tutorialStep >= 0 && m.tutorialStep < len(tutorialSteps) {
+		wantRight := 54
+		if wantRight > m.width-22 {
+			wantRight = m.width - 22
+		}
+		if wantRight > rightWidth {
+			rightWidth = wantRight
+		}
+	}
 	mapWidth := m.width - rightWidth - 2 // -2 for the gap between panels
 
 	// statusBarHeight = 1 content line + 2 border rows = 3 total rendered lines
@@ -648,6 +712,9 @@ func (m Model) View() string {
 	if m.tutorialStep >= 0 && m.tutorialStep < len(tutorialSteps) {
 		// rightWidth-2 for border, -2 again for inner padding = rightWidth-4
 		menuContent = RenderTutorial(m.tutorialStep, rightWidth-4)
+	} else if s.Tutorial != nil && s.Tutorial.IsActive() && s.Phase == game.PhaseActionSelect {
+		hint := StyleTutorial.Render(s.Tutorial.Hint())
+		menuContent = hint + "\n\n" + RenderActionMenuFull(s)
 	} else if m.ui == uiPhaseNotes {
 		menuContent = RenderNotes(s.FieldNotes, menuHeight, m.notesScroll)
 	} else if s.Phase == game.PhaseTravel {
@@ -661,9 +728,12 @@ func (m Model) View() string {
 	} else {
 		menuContent = RenderActionMenuFull(s)
 	}
-	// Clip menu content — lipgloss Height() pads but does NOT clip, so we must
-	// truncate the content ourselves before handing it to the border renderer.
+	// Clip menu content to menuHeight lines, then truncate each line to the
+	// panel inner width. lipgloss word-wraps any line wider than Width() inside
+	// Render(), which adds lines AFTER our clip and makes the panel taller than
+	// allocated — truncating prevents that word-wrap from ever firing.
 	menuContent = clipLines(menuContent, menuHeight)
+	menuContent = truncateLines(menuContent, rightWidth-2)
 
 	menuPanel := StyleBorder.
 		Width(rightWidth - 2).
@@ -677,6 +747,8 @@ func (m Model) View() string {
 	if m.saveMsg != "" {
 		statusContent += "  " + StyleSuccess.Render(m.saveMsg)
 	}
+	// Truncate to inner width so a long saveMsg can't trigger word-wrap.
+	statusContent = ansi.Truncate(statusContent, m.width-4, "")
 	statusBar := StyleBorder.
 		Width(m.width - 4).
 		Render(statusContent)
@@ -684,7 +756,14 @@ func (m Model) View() string {
 	// Main content: map + right
 	mainContent := lipgloss.JoinHorizontal(lipgloss.Top, mapPanel, rightPanel)
 
-	return lipgloss.JoinVertical(lipgloss.Left, mainContent, statusBar)
+	view := lipgloss.JoinVertical(lipgloss.Left, mainContent, statusBar)
+
+	// Defensive: if any panel overflow slipped through, clip the whole view to
+	// exactly m.height lines so bubbletea never scrolls the alt-screen.
+	if viewLines := strings.Split(view, "\n"); len(viewLines) > m.height {
+		view = strings.Join(viewLines[:m.height], "\n")
+	}
+	return view
 }
 
 func (m Model) renderStartMenu() string {
@@ -781,6 +860,20 @@ func clipLines(s string, maxLines int) string {
 		return s
 	}
 	return strings.Join(lines[:maxLines], "\n")
+}
+
+// truncateLines truncates each line of s to at most maxWidth visible characters.
+// This prevents lipgloss's word-wrap (triggered by Width()) from splitting lines
+// and making a panel taller than its allocated height.
+func truncateLines(s string, maxWidth int) string {
+	if maxWidth <= 0 {
+		return s
+	}
+	lines := strings.Split(s, "\n")
+	for i, l := range lines {
+		lines[i] = ansi.Truncate(l, maxWidth, "")
+	}
+	return strings.Join(lines, "\n")
 }
 
 func structureDesc(s game.StructureType) string {
