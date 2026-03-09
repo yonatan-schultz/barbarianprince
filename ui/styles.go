@@ -82,6 +82,10 @@ var (
 			Foreground(colorGold).
 			Bold(true).
 			Align(lipgloss.Center)
+
+	StyleTutorial = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#00CFFF")).
+			Bold(true)
 )
 
 // TerrainColor returns the foreground color for a terrain type

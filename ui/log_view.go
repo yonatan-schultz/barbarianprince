@@ -7,6 +7,7 @@ import (
 const maxLogLines = 30
 
 // wrapLine splits a string into lines of at most maxWidth runes each.
+// Continuation lines preserve the leading indentation of the original line.
 func wrapLine(s string, maxWidth int) []string {
 	if maxWidth <= 0 {
 		return []string{s}
@@ -15,9 +16,21 @@ func wrapLine(s string, maxWidth int) []string {
 	if len(runes) <= maxWidth {
 		return []string{s}
 	}
+
+	// Measure leading indentation so continuation lines stay aligned.
+	indent := 0
+	for indent < len(runes) && runes[indent] == ' ' {
+		indent++
+	}
+	// Only preserve indent when it leaves enough room for content.
+	contIndent := []rune{}
+	if indent > 0 && indent < maxWidth/2 {
+		contIndent = []rune(strings.Repeat(" ", indent))
+	}
+
 	var result []string
 	for len(runes) > maxWidth {
-		// Try to break at a word boundary
+		// Try to break at a word boundary.
 		cut := maxWidth
 		for cut > maxWidth/2 && runes[cut] != ' ' {
 			cut--
@@ -27,9 +40,12 @@ func wrapLine(s string, maxWidth int) []string {
 		}
 		result = append(result, string(runes[:cut]))
 		runes = runes[cut:]
-		// Trim leading space on continuation lines
+		// Strip the break-space then re-apply indentation.
 		for len(runes) > 0 && runes[0] == ' ' {
 			runes = runes[1:]
+		}
+		if len(contIndent) > 0 && len(runes) > 0 {
+			runes = append(contIndent, runes...)
 		}
 	}
 	if len(runes) > 0 {

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/x/ansi"
+
 	"barbarianprince/game"
 )
 
@@ -237,7 +239,10 @@ func RenderStatus(state *game.GameState, maxWidth int) string {
 		}
 	}
 
-	return strings.Join(parts, "")
+	result := strings.Join(parts, "")
+	// Truncate to fit within the panel's inner width so lipgloss's word-wrap
+	// (triggered by Width()) never splits the status line into two lines.
+	return ansi.Truncate(result, maxWidth, "")
 }
 
 // RenderNotes renders the field notes panel with scroll support.

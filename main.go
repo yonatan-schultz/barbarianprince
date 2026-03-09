@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 
@@ -10,7 +11,10 @@ import (
 )
 
 func main() {
-	model := ui.NewModel()
+	forceTutorial := flag.Bool("tutorial", false, "start with in-game tutorial hints enabled")
+	flag.Parse()
+
+	model := ui.NewModel(*forceTutorial)
 	p := tea.NewProgram(
 		model,
 		tea.WithAltScreen(),
