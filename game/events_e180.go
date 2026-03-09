@@ -235,4 +235,39 @@ func registerEventsE180() {
 			GoldChange: gold,
 		}
 	})
+
+	// e195 - True Love (r228): a noble companion joins the party permanently.
+	// Never deserts, +1 W&W, and guarantees rescue if the prince falls unconscious.
+	// One-shot: if already met, falls back to a minor gold reward.
+	RegisterEvent("e195", func(s *GameState, ctx EventContext) EventResult {
+		if s.Flags.TrueLoveMet {
+			// Already met — a generous patron instead
+			gold := Roll2d6() * 3
+			return EventResult{
+				Messages:   []string{fmt.Sprintf("A generous admirer rewards your growing reputation: %d gold.", gold)},
+				GoldChange: gold,
+			}
+		}
+		s.Flags.TrueLoveMet = true
+		names := []string{"Lady Mira", "Lady Sora", "Lady Elara", "Lady Vessa"}
+		name := names[Roll1d6()%len(names)]
+		tl := Character{
+			Name:         name,
+			Type:         TypeGeneric,
+			CombatSkill:  2,
+			MaxEndurance: 6,
+			Morale:       6,
+			IsTrueLove:   true,
+			DailyWage:    0,
+		}
+		s.AddFollower(tl)
+		return EventResult{
+			Messages: []string{
+				fmt.Sprintf("%s — a noble driven from her home by the usurper — approaches you.", name),
+				"Her eyes hold both grief and steel. She asks to stand at your side.",
+				fmt.Sprintf("%s joins your party. (CS 2, E 6, no wage) Never deserts. +1 W&W.", name),
+			},
+			Note: fmt.Sprintf("%s joined at %s (day %d). True Love: never deserts, +1 W&W, guarantees rescue.", name, s.CurrentHex, s.Day),
+		}
+	})
 }

@@ -125,8 +125,12 @@ func doSeekNews(s *GameState) *EventResult {
 	case 10:
 		result = DispatchEvent(s, "e016", EventContext{}) // local magician
 	case 11:
-		result = EventResult{Messages: []string{"A thieves' guild contact approaches — for 20 gold you learn of a cache nearby."},
-			Note: "Thieves' guild tip: cache rumoured nearby"}
+		if !s.Flags.TrueLoveMet {
+			result = DispatchEvent(s, "e195", EventContext{})
+		} else {
+			result = EventResult{Messages: []string{"A thieves' guild contact approaches — for 20 gold you learn of a cache nearby."},
+				Note: "Thieves' guild tip: cache rumoured nearby"}
+		}
 	default: // 12+
 		if s.Gold >= 10 {
 			result = DispatchEvent(s, "e143", EventContext{}) // secret informant
@@ -207,16 +211,20 @@ func doSeekFollowers(s *GameState) *EventResult {
 		f := Character{Name: "Runaway", Type: TypeGeneric, CombatSkill: 1, MaxEndurance: 3, IsEscapee: true, Morale: 3}
 		s.AddFollower(f)
 		result = EventResult{Messages: []string{"A runaway youth joins your party, asking nothing. (CS 1, E 3) — will flee if you enter a settlement."}}
-	default: // 12 — porters + guide
-		count := Roll1d6()
-		for i := 0; i < count; i++ {
-			name := fmt.Sprintf("Porter %d", i+1)
-			f := Character{Name: name, Type: TypeGeneric, CombatSkill: 1, MaxEndurance: 2, DailyWage: 1, Morale: 3}
-			s.AddFollower(f)
+	default: // 12 — true love (first encounter) or porters + guide thereafter
+		if !s.Flags.TrueLoveMet {
+			result = DispatchEvent(s, "e195", EventContext{})
+		} else {
+			count := Roll1d6()
+			for i := 0; i < count; i++ {
+				name := fmt.Sprintf("Porter %d", i+1)
+				f := Character{Name: name, Type: TypeGeneric, CombatSkill: 1, MaxEndurance: 2, DailyWage: 1, Morale: 3}
+				s.AddFollower(f)
+			}
+			guide := Character{Name: "Guide", Type: TypeGuide, CombatSkill: 2, MaxEndurance: 3, DailyWage: 2, IsGuide: true, Morale: 4}
+			s.AddFollower(guide)
+			result = EventResult{Messages: []string{fmt.Sprintf("%d porter(s) at 1 gold/day + a guide at 2 gold/day join you.", count)}}
 		}
-		guide := Character{Name: "Guide", Type: TypeGuide, CombatSkill: 2, MaxEndurance: 3, DailyWage: 2, IsGuide: true, Morale: 4}
-		s.AddFollower(guide)
-		result = EventResult{Messages: []string{fmt.Sprintf("%d porter(s) at 1 gold/day + a guide at 2 gold/day join you.", count)}}
 	}
 	return dispatchActionEvent(s, "", result)
 }

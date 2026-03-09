@@ -20,6 +20,7 @@ type GlobalFlags struct {
 	StaffQuestActive    bool
 	StaffQuestDays      int  // days remaining in staff quest
 	PegasusCaptured     bool
+	TrueLoveMet         bool // true love companion has joined the party
 	DragonSlain         map[HexID]bool
 	WizardsTowerVisited map[HexID]bool
 	SecretFound         map[string]bool

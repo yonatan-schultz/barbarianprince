@@ -168,6 +168,7 @@ func SurpriseCheck(surpriseCode string) bool {
 
 // CheckUnconsciousFollowers handles r221b: when the prince falls unconscious,
 // each follower rolls 1d6: 4+ = carries him; 1-3 = all desert and steal everything.
+// True love (r228) guarantees rescue with no roll.
 // Returns messages. Call this after any combat round where the prince may be unconscious.
 func CheckUnconsciousFollowers(s *GameState) []string {
 	if !s.Prince.IsUnconscious() || len(s.Party) == 0 {
@@ -175,10 +176,18 @@ func CheckUnconsciousFollowers(s *GameState) []string {
 	}
 	var msgs []string
 	msgs = append(msgs, "Cal Arath is unconscious!")
+
+	// True love never abandons the prince (r228)
+	for _, f := range s.Party {
+		if f.IsTrueLove {
+			msgs = append(msgs, fmt.Sprintf("%s refuses to leave your side, carrying you to safety.", f.Name))
+			return msgs
+		}
+	}
+
 	roll := Roll1d6()
 	if roll >= 4 {
 		msgs = append(msgs, "Your followers rally and carry you to safety.")
-		// Prince's CS becomes 0 while unconscious (handled via IsUnconscious in EffectiveCombatSkill)
 	} else {
 		msgs = append(msgs, "Your followers abandon you, taking everything!")
 		s.Gold = 0

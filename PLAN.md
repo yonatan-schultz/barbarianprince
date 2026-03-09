@@ -150,10 +150,11 @@ Interactive guided introduction for new players. Runs before the main game (or c
 - Desert: r281/r282 alternating tables; ruins: expanded from 1d6 to 2d6 (11 outcomes)
 - News, audience, farmland/countryside/forest/hills/mountains tables all updated with new NPC outcomes
 
-### 🔲 True Love Mechanics (r228)
+### ✅ True Love Mechanics (r228)
 - NPC follower flagged `IsTrueLove`
-- Special loyalty rules; prince unconscious triggers rescue attempt
-- Reunion event if separated
+- Never deserts (starvation or unpaid wages), +1 W&W while present
+- Prince unconscious: True Love guarantees rescue with no roll
+- Met via seek-news (roll 11) or seek-followers (roll 12), one-shot per game (e195)
 
 ### 🔲 Full Follower Economy
 - Porter load tracking (each porter carries N food/gold units)
