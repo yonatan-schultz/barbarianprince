@@ -43,7 +43,7 @@ type Model struct {
 // forceTutorial enables in-game tutorial hints even if the player has completed
 // the tutorial before (mirrors the --tutorial CLI flag).
 func NewModel(forceTutorial bool) Model {
-	opts := []string{"New Game", "Tutorial"}
+	opts := []string{"New Game", "Easy Mode", "Hard Mode", "Tutorial"}
 	if game.SaveExists() {
 		opts = append(opts, "Continue")
 	}
@@ -135,7 +135,7 @@ func (m Model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.state.Phase == game.PhaseGameOver {
 		if key == "enter" {
 			// Return to start menu
-			opts := []string{"New Game", "Tutorial"}
+			opts := []string{"New Game", "Easy Mode", "Hard Mode", "Tutorial"}
 			if game.SaveExists() {
 				opts = append(opts, "Continue")
 			}
@@ -336,6 +336,21 @@ func (m Model) handleStartMenuKey(key string) (tea.Model, tea.Cmd) {
 			m.startIndex = 1
 			return m.startMenuConfirm()
 		}
+	case "3":
+		if len(m.startOpts) > 2 {
+			m.startIndex = 2
+			return m.startMenuConfirm()
+		}
+	case "4":
+		if len(m.startOpts) > 3 {
+			m.startIndex = 3
+			return m.startMenuConfirm()
+		}
+	case "5":
+		if len(m.startOpts) > 4 {
+			m.startIndex = 4
+			return m.startMenuConfirm()
+		}
 	case "enter", " ":
 		return m.startMenuConfirm()
 	case "q", "ctrl+c":
@@ -357,6 +372,18 @@ func (m Model) startMenuConfirm() (tea.Model, tea.Cmd) {
 		if m.isTutorialGame && !game.TutorialCompleted() {
 			m.state.Tutorial = game.NewTutorialState()
 		}
+	case "Easy Mode":
+		m.state = game.NewGameStateWithDifficulty(game.DifficultyEasy)
+		m.ui = uiPhasePlaying
+		m.tutorialStep = -1
+		m.eventResult = nil
+		m.saveMsg = ""
+	case "Hard Mode":
+		m.state = game.NewGameStateWithDifficulty(game.DifficultyHard)
+		m.ui = uiPhasePlaying
+		m.tutorialStep = -1
+		m.eventResult = nil
+		m.saveMsg = ""
 	case "Tutorial":
 		m.state = game.NewGameState()
 		m.ui = uiPhasePlaying

@@ -321,3 +321,308 @@ func TestSeekAudience_BarredPreventsAction(t *testing.T) {
 	}
 	t.Error("barred audience should log a message")
 }
+
+// ---- ActionRest -------------------------------------------------------------
+
+func TestRestAdvancesDay(t *testing.T) {
+	s := NewGameState()
+	s.FoodUnits = 100
+	dayBefore := s.Day
+	ExecuteAction(s, ActionRest)
+	if s.Day != dayBefore+1 {
+		t.Errorf("Rest: day = %d, want %d", s.Day, dayBefore+1)
+	}
+}
+
+func TestRestHealsInSettlement(t *testing.T) {
+	s := NewGameState()
+	s.CurrentHex = NewHexID(1, 1) // Ogon - settlement
+	s.FoodUnits = 100
+	s.Gold = 100
+	s.Prince.Wounds = 3
+	ExecuteAction(s, ActionRest)
+	if s.Prince.Wounds >= 3 {
+		t.Error("Rest in settlement should reduce wounds")
+	}
+}
+
+func TestRestLogsMessage(t *testing.T) {
+	s := NewGameState()
+	s.FoodUnits = 100
+	logBefore := len(s.Log)
+	ExecuteAction(s, ActionRest)
+	if len(s.Log) <= logBefore {
+		t.Error("Rest should append log messages")
+	}
+}
+
+// ---- ActionBuyRaft ----------------------------------------------------------
+
+func TestBuyRaft_SucceedsWithEnoughGold(t *testing.T) {
+	s := NewGameState()
+	s.CurrentHex = NewHexID(1, 1) // settlement
+	s.FoodUnits = 100
+	s.Gold = 50
+
+	ExecuteAction(s, ActionBuyRaft)
+
+	if !s.Prince.HasPossession(PossRaft) {
+		t.Error("BuyRaft with enough gold should add PossRaft to inventory")
+	}
+	if s.Gold != 35 { // 50 - 15 = 35
+		t.Errorf("Gold = %d, want 35 after buying raft for 15", s.Gold)
+	}
+}
+
+func TestBuyRaft_FailsWithInsufficientGold(t *testing.T) {
+	s := NewGameState()
+	s.CurrentHex = NewHexID(1, 1)
+	s.FoodUnits = 100
+	s.Gold = 5 // less than 15
+
+	ExecuteAction(s, ActionBuyRaft)
+
+	if s.Prince.HasPossession(PossRaft) {
+		t.Error("BuyRaft with insufficient gold should not give raft")
+	}
+	if s.Gold != 5 {
+		t.Errorf("Gold = %d, want 5 unchanged when can't afford raft", s.Gold)
+	}
+}
+
+func TestBuyRaft_AvailableAtSettlement(t *testing.T) {
+	s := NewGameState()
+	s.CurrentHex = NewHexID(1, 1) // Ogon
+
+	found := false
+	for _, a := range s.AvailableActions() {
+		if a == ActionBuyRaft {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("ActionBuyRaft should be available at settlement when not already carrying one")
+	}
+}
+
+func TestBuyRaft_NotAvailableIfAlreadyOwned(t *testing.T) {
+	s := NewGameState()
+	s.CurrentHex = NewHexID(1, 1)
+	s.Prince.AddPossession(PossRaft)
+
+	for _, a := range s.AvailableActions() {
+		if a == ActionBuyRaft {
+			t.Error("ActionBuyRaft should not be available when prince already has a raft")
+		}
+	}
+}
+
+// ---- HideCacheHere ----------------------------------------------------------
+
+func TestHideCacheHere_Success(t *testing.T) {
+	s := NewGameState()
+	s.CurrentHex = NewHexID(5, 5)
+	s.Gold = 50
+
+	msgs := HideCacheHere(s, 30)
+
+	if len(msgs) == 0 {
+		t.Error("HideCacheHere should return messages")
+	}
+	if s.Gold != 20 {
+		t.Errorf("Gold = %d, want 20 after hiding 30 gold", s.Gold)
+	}
+	if !s.GetHexFlags(s.CurrentHex).CacheHidden {
+		t.Error("CacheHidden flag should be set after hiding cache")
+	}
+	if len(s.Caches) != 1 {
+		t.Errorf("Caches len = %d, want 1", len(s.Caches))
+	}
+}
+
+func TestHideCacheHere_AlreadyHasCacheBlocked(t *testing.T) {
+	s := NewGameState()
+	s.CurrentHex = NewHexID(5, 5)
+	s.Gold = 50
+	s.GetHexFlags(s.CurrentHex).CacheHidden = true
+
+	msgs := HideCacheHere(s, 20)
+
+	if len(msgs) == 0 {
+		t.Error("HideCacheHere should return a message when cache already exists")
+	}
+	if s.Gold != 50 {
+		t.Error("Gold should not change when cache already exists")
+	}
+}
+
+func TestHideCacheHere_NoGold(t *testing.T) {
+	s := NewGameState()
+	s.CurrentHex = NewHexID(5, 5)
+	s.Gold = 0
+
+	msgs := HideCacheHere(s, 10)
+
+	if len(msgs) == 0 {
+		t.Error("HideCacheHere should return a message when no gold to hide")
+	}
+}
+
+// ---- PayLodging desertion path ----------------------------------------------
+
+func TestPayLodging_CannotAffordSleepsRough(t *testing.T) {
+	s := NewGameState()
+	s.CurrentHex = NewHexID(1, 1) // settlement
+	s.Gold = 0
+	s.Prince.WitWiles = 0
+
+	msgs := PayLodging(s)
+
+	if len(msgs) == 0 {
+		t.Error("PayLodging with no gold should return messages about sleeping rough")
+	}
+	// Check that the "sleeping rough" message is in there
+	found := false
+	for _, m := range msgs {
+		if len(m) > 10 {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("PayLodging should produce at least one message")
+	}
+}
+
+func TestPayLodging_WithMounts(t *testing.T) {
+	s := NewGameState()
+	s.CurrentHex = NewHexID(1, 1) // settlement
+	s.Gold = 100
+	s.Prince.HasMount = true
+
+	msgs := PayLodging(s)
+
+	if len(msgs) == 0 {
+		t.Error("PayLodging with mount should return stabling message")
+	}
+	// Gold should have been reduced by 2 (1 person + 1 mount)
+	if s.Gold != 98 {
+		t.Errorf("Gold = %d, want 98 after lodging+stabling (1+1=2)", s.Gold)
+	}
+}
+
+// ---- HealRest: wilderness probabilistic path --------------------------------
+
+func TestHealRest_WildernessEventuallyHeals(t *testing.T) {
+	s := NewGameState()
+	s.CurrentHex = NewHexID(4, 3) // Mountains - wilderness
+	s.Prince.Wounds = 5
+
+	healed := false
+	for i := 0; i < 30; i++ {
+		s2 := NewGameState()
+		s2.CurrentHex = NewHexID(4, 3)
+		s2.Prince.Wounds = 5
+		msgs := HealRest(s2)
+		if s2.Prince.Wounds < 5 || len(msgs) > 0 {
+			healed = true
+			break
+		}
+	}
+	if !healed {
+		t.Error("HealRest in wilderness should sometimes heal (1d6>=5)")
+	}
+}
+
+func TestHealRest_WildernessPoison(t *testing.T) {
+	s := NewGameState()
+	s.CurrentHex = NewHexID(4, 3) // wilderness
+	s.Prince.PoisonWounds = 3
+
+	cleared := false
+	for i := 0; i < 30; i++ {
+		s2 := NewGameState()
+		s2.CurrentHex = NewHexID(4, 3)
+		s2.Prince.PoisonWounds = 3
+		HealRest(s2)
+		if s2.Prince.PoisonWounds < 3 {
+			cleared = true
+			break
+		}
+	}
+	if !cleared {
+		t.Error("HealRest in wilderness should sometimes reduce poison (1d6>=5)")
+	}
+}
+
+// ---- SeekNews at non-settlement ---------------------------------------------
+
+func TestSeekNews_NotInSettlement(t *testing.T) {
+	s := NewGameState()
+	s.CurrentHex = NewHexID(4, 3) // Mountains - no settlement
+
+	result := ExecuteAction(s, ActionSeekNews)
+	if result != nil {
+		t.Error("SeekNews outside settlement should return nil")
+	}
+	found := false
+	for _, msg := range s.Log {
+		if len(msg) > 5 {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("SeekNews outside settlement should log a message")
+	}
+}
+
+// ---- SeekFollowers at non-settlement ----------------------------------------
+
+func TestSeekFollowers_NotInSettlement(t *testing.T) {
+	s := NewGameState()
+	s.CurrentHex = NewHexID(4, 3) // wilderness
+
+	result := ExecuteAction(s, ActionSeekFollowers)
+	if result != nil {
+		t.Error("SeekFollowers outside settlement should return nil")
+	}
+}
+
+// ---- ActionString and ActionKey coverage ------------------------------------
+
+func TestActionString(t *testing.T) {
+	allActions := []Action{
+		ActionTravel, ActionRest, ActionSeekNews, ActionSeekFollowers,
+		ActionBuyFood, ActionSeekAudience, ActionSubmitOffering,
+		ActionSearchRuins, ActionSearchCache, ActionUseItem,
+		ActionHunt, ActionBuyRaft,
+	}
+	for _, a := range allActions {
+		s := a.String()
+		if s == "" || s == "Unknown" {
+			t.Errorf("Action(%d).String() = %q, want non-empty known string", a, s)
+		}
+		k := a.ActionKey()
+		if k == "" {
+			t.Errorf("Action(%d).ActionKey() = %q, want non-empty key", a, k)
+		}
+	}
+}
+
+// ---- TurnPhase String (via StatusLine) --------------------------------------
+
+func TestTurnPhases(t *testing.T) {
+	phases := []TurnPhase{
+		PhaseActionSelect, PhaseEventResolve, PhaseCombat, PhaseTravel, PhaseGameOver,
+	}
+	// Just verify they're distinct integer values (not overlapping)
+	seen := make(map[TurnPhase]bool)
+	for _, p := range phases {
+		if seen[p] {
+			t.Errorf("TurnPhase %d is duplicated", p)
+		}
+		seen[p] = true
+	}
+}

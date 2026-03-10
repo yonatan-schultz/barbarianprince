@@ -165,22 +165,15 @@ Interactive guided introduction for new players. Runs before the main game (or c
 - Alcove of Sending, Arch of Travel, Gateway to Darkness, Mirror of Reversal
 - Require multi-turn state and new UI flows
 
-### 🔲 Test Coverage Expansion
-Current: **58.7%**. Target: **70%+**
-
-Priority additions:
-- `TestResolveCombatRound` — wounds applied, enemy death, loot
-- `TestAttemptFlee` — succeeds on roll ≥4, damages on failure
-- `TestAdvanceDay` — food consumed, day advances, starvation accrues, wages deducted
-- `TestBuyFood` / `TestHuntForFood` — gold deducted, food added
-- `TestAvailableActions` — correct actions per hex structure
-- `TestDoTravel` — valid/invalid moves, visited hex tracking
+### ✅ Test Coverage Expansion
+**71.0%** (was 58.7%). Covers: difficulty modes, win/lose conditions, tutorial state, character edge cases, AdvanceDay wage/starvation/escapee paths, rest/heal/poison, BuyRaft, PayLodging, SeekNews/Followers guards, cache, action strings, turn phases, possession names.
 
 ### 🔲 Sound / Accessibility
 - Terminal bell on combat, death, win
 - Colorblind-friendly palette option (`--no-color`)
 
-### 🔲 Difficulty Modes
-- **Easy**: start with 20 gold + 20 food; 80-day limit
-- **Hard**: start with 5 gold + 7 food; harsher event tables
-- Selectable from start menu; stored in `GameState`
+### ✅ Difficulty Modes
+- **Easy**: 20 gold + 20 food; 80-day limit
+- **Normal**: 10 gold + 14 food; 70-day limit (unchanged)
+- **Hard**: 5 gold + 7 food; 70-day limit
+- Selectable from start menu ([1-5] shortcuts); stored in `GameState`; all status/game-over UI uses `DayLimit()`

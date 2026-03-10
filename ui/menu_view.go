@@ -44,7 +44,7 @@ func RenderActionMenu(state *game.GameState) string {
 		}
 	}
 
-	lines = append(lines, StyleTitle.Render(fmt.Sprintf("[ %s ] Day %d/70", hexName, state.Day)))
+	lines = append(lines, StyleTitle.Render(fmt.Sprintf("[ %s ] Day %d/%d", hexName, state.Day, state.DayLimit())))
 	lines = append(lines, "")
 
 	actions := state.AvailableActions()
@@ -120,7 +120,7 @@ func RenderGameOver(state *game.GameState) string {
 		lines = append(lines, "")
 		lines = append(lines, StyleSuccess.Render(state.WinReason))
 		lines = append(lines, "")
-		lines = append(lines, StyleValue.Render(fmt.Sprintf("Days survived:    %d / 70", state.Day)))
+		lines = append(lines, StyleValue.Render(fmt.Sprintf("Days survived:    %d / %d", state.Day, state.DayLimit())))
 		lines = append(lines, StyleValue.Render(fmt.Sprintf("Gold:             %d", state.Gold)))
 		lines = append(lines, StyleValue.Render(fmt.Sprintf("Followers:        %d", followers)))
 		lines = append(lines, StyleValue.Render(fmt.Sprintf("Field notes:      %d", notes)))
@@ -131,7 +131,7 @@ func RenderGameOver(state *game.GameState) string {
 		lines = append(lines, "")
 		lines = append(lines, StyleDanger.Render(state.LoseReason))
 		lines = append(lines, "")
-		lines = append(lines, StyleValue.Render(fmt.Sprintf("Days survived:    %d / 70", state.Day-1)))
+		lines = append(lines, StyleValue.Render(fmt.Sprintf("Days survived:    %d / %d", state.Day-1, state.DayLimit())))
 		lines = append(lines, StyleValue.Render(fmt.Sprintf("Gold:             %d", state.Gold)))
 		lines = append(lines, StyleValue.Render(fmt.Sprintf("Followers:        %d", followers)))
 		lines = append(lines, StyleValue.Render(fmt.Sprintf("Field notes:      %d", notes)))
@@ -150,7 +150,7 @@ func RenderStatus(state *game.GameState, maxWidth int) string {
 	prince := &state.Prince
 
 	// Day progress bar (omitted on very narrow terminals, < 60 cols)
-	dayFrac := float64(state.Day) / 70.0
+	dayFrac := float64(state.Day) / float64(state.DayLimit())
 	barWidth := 20
 	filled := int(dayFrac * float64(barWidth))
 	bar := strings.Repeat("█", filled) + strings.Repeat("░", barWidth-filled)
@@ -166,8 +166,8 @@ func RenderStatus(state *game.GameState, maxWidth int) string {
 	var parts []string
 
 	// Day counter: highlight in red when ≤ 10 days remain
-	daysLeft := 70 - state.Day + 1
-	dayStr := fmt.Sprintf("%d/70", state.Day)
+	daysLeft := state.DayLimit() - state.Day + 1
+	dayStr := fmt.Sprintf("%d/%d", state.Day, state.DayLimit())
 	if daysLeft <= 10 {
 		parts = append(parts, StyleLabel.Render("Day: ")+StyleDanger.Render(dayStr+" !!"))
 	} else {

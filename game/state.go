@@ -1,6 +1,29 @@
 package game
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
+
+// Difficulty represents the game difficulty level
+type Difficulty int
+
+const (
+	DifficultyNormal Difficulty = iota
+	DifficultyEasy
+	DifficultyHard
+)
+
+func (d Difficulty) String() string {
+	switch d {
+	case DifficultyEasy:
+		return "Easy"
+	case DifficultyHard:
+		return "Hard"
+	default:
+		return "Normal"
+	}
+}
 
 // TurnPhase represents the current phase of gameplay
 type TurnPhase int
@@ -71,6 +94,9 @@ type GameState struct {
 
 	// Tutorial tracks in-game guided tutorial progress. Nil when inactive.
 	Tutorial *TutorialState `json:"tutorial,omitempty"`
+
+	// Difficulty is the selected difficulty level for this game.
+	Difficulty Difficulty `json:"difficulty,omitempty"`
 }
 
 // NewGameState creates a fresh game state
@@ -95,6 +121,39 @@ func NewGameState() *GameState {
 	s.AddLog("You must accumulate 500 gold within 70 days to reclaim your throne.")
 	s.AddLog("You stand in Ogon, the northern city of your homeland.")
 	return s
+}
+
+// NewGameStateWithDifficulty creates a fresh game state with the given difficulty.
+func NewGameStateWithDifficulty(diff Difficulty) *GameState {
+	s := NewGameState()
+	s.Difficulty = diff
+	switch diff {
+	case DifficultyEasy:
+		s.Gold = 20
+		s.FoodUnits = 20
+	case DifficultyHard:
+		s.Gold = 5
+		s.FoodUnits = 7
+	}
+	dayLimit := s.DayLimit()
+	for i, line := range s.Log {
+		if strings.Contains(line, "Day 1 of") {
+			s.Log[i] = fmt.Sprintf("Day 1 of %d. Gold: %d. Food: %d units.", dayLimit, s.Gold, s.FoodUnits)
+			break
+		}
+	}
+	if diff != DifficultyNormal {
+		s.AddLog(fmt.Sprintf("Difficulty: %s.", diff))
+	}
+	return s
+}
+
+// DayLimit returns the maximum number of days for the current difficulty.
+func (s *GameState) DayLimit() int {
+	if s.Difficulty == DifficultyEasy {
+		return 80
+	}
+	return 70
 }
 
 // AddLog appends a message to the narrative log
@@ -357,8 +416,8 @@ func CheckLoseConditions(s *GameState) (bool, string) {
 	if s.Prince.IsDead() {
 		return true, "Cal Arath has fallen in battle. His quest ends here."
 	}
-	if s.Day > 70 {
-		return true, "70 days have passed. Without the resources to reclaim your throne, you fade into obscurity."
+	if s.Day > s.DayLimit() {
+		return true, fmt.Sprintf("%d days have passed. Without the resources to reclaim your throne, you fade into obscurity.", s.DayLimit())
 	}
 	return false, ""
 }
@@ -513,8 +572,8 @@ func (s *GameState) RemoveFollower(name string) bool {
 
 // StatusLine returns a brief status string
 func (s *GameState) StatusLine() string {
-	line := fmt.Sprintf("Day %d/70 | Gold: %d | Food: %d | Endurance: %d/%d | Followers: %d",
-		s.Day, s.Gold, s.FoodUnits,
+	line := fmt.Sprintf("Day %d/%d | Gold: %d | Food: %d | Endurance: %d/%d | Followers: %d",
+		s.Day, s.DayLimit(), s.Gold, s.FoodUnits,
 		s.Prince.CurrentEndurance(), s.Prince.MaxEndurance,
 		len(s.Party))
 	if s.Prince.PoisonWounds > 0 {
