@@ -153,18 +153,18 @@ func doSeekFollowers(s *GameState) *EventResult {
 	var result EventResult
 	switch roll {
 	case 2: // Freeman joins free
-		f := Character{Name: "Freeman", Type: TypeGeneric, CombatSkill: 3, MaxEndurance: 4, Morale: 4}
+		f := Character{Name: "Freeman", Type: TypeGeneric, CombatSkill: 3, MaxEndurance: 4, Morale: 4, MaxMorale: 4}
 		s.AddFollower(f)
 		result = EventResult{Messages: []string{"A freeman offers his sword, asking nothing in return. (CS 3, E 4)"}}
-	case 3: // Lancer with horse
-		f := Character{Name: "Lancer", Type: TypeMercenary, CombatSkill: 5, MaxEndurance: 5, DailyWage: 3, HasMount: true, MountType: MountHorse, Morale: 5}
+	case 3: // Lancer with horse (mount eats 2 food/day in rough terrain, forages free in open terrain)
+		f := Character{Name: "Lancer", Type: TypeMercenary, CombatSkill: 5, MaxEndurance: 5, DailyWage: 3, HasMount: true, MountType: MountHorse, Morale: 5, MaxMorale: 5}
 		s.AddFollower(f)
-		result = EventResult{Messages: []string{"A lancer with a horse joins for 3 gold/day. (CS 5, E 5)"}}
+		result = EventResult{Messages: []string{"A lancer with a horse joins for 3 gold/day. (CS 5, E 5, mount eats 2 food/day in rough terrain)"}}
 	case 4: // Mercenaries
 		count := Roll1d6()%2 + 1
 		for i := 0; i < count; i++ {
 			name := fmt.Sprintf("Mercenary %d", i+1)
-			f := Character{Name: name, Type: TypeMercenary, CombatSkill: 4, MaxEndurance: 4, DailyWage: 2, Morale: 4}
+			f := Character{Name: name, Type: TypeMercenary, CombatSkill: 4, MaxEndurance: 4, DailyWage: 2, Morale: 4, MaxMorale: 4}
 			s.AddFollower(f)
 		}
 		result = EventResult{Messages: []string{fmt.Sprintf("%d mercenary/mercenaries available at 2 gold/day each. (CS 4, E 4)", count)}}
@@ -178,14 +178,14 @@ func doSeekFollowers(s *GameState) *EventResult {
 			result = EventResult{Messages: []string{"A horse dealer offers mounts at 10 gold each — you can't afford one."}}
 		}
 	case 6: // Local guide
-		f := Character{Name: "Local Guide", Type: TypeGuide, CombatSkill: 2, MaxEndurance: 3, DailyWage: 2, IsGuide: true, Morale: 4}
+		f := Character{Name: "Local Guide", Type: TypeGuide, CombatSkill: 2, MaxEndurance: 3, DailyWage: 2, IsGuide: true, Morale: 4, MaxMorale: 4}
 		s.AddFollower(f)
 		result = EventResult{Messages: []string{"A local guide joins for 2 gold/day. (CS 2, E 3, Guide)"}}
 	case 7: // Henchmen
 		count := Roll1d6()
 		for i := 0; i < count; i++ {
 			name := fmt.Sprintf("Henchman %d", i+1)
-			f := Character{Name: name, Type: TypeGeneric, CombatSkill: 3, MaxEndurance: 3, DailyWage: 1, Morale: 3}
+			f := Character{Name: name, Type: TypeGeneric, CombatSkill: 3, MaxEndurance: 3, DailyWage: 1, Morale: 3, MaxMorale: 3}
 			s.AddFollower(f)
 		}
 		result = EventResult{Messages: []string{fmt.Sprintf("%d henchman/henchmen available at 1 gold/day each. (CS 3, E 3)", count)}}
@@ -208,7 +208,7 @@ func doSeekFollowers(s *GameState) *EventResult {
 			result = EventResult{Messages: []string{"An honest horse dealer offers mounts at 7 gold — you can't afford one."}}
 		}
 	case 11: // Runaway joins free
-		f := Character{Name: "Runaway", Type: TypeGeneric, CombatSkill: 1, MaxEndurance: 3, IsEscapee: true, Morale: 3}
+		f := Character{Name: "Runaway", Type: TypeGeneric, CombatSkill: 1, MaxEndurance: 3, IsEscapee: true, Morale: 3, MaxMorale: 3}
 		s.AddFollower(f)
 		result = EventResult{Messages: []string{"A runaway youth joins your party, asking nothing. (CS 1, E 3) — will flee if you enter a settlement."}}
 	default: // 12 — true love (first encounter) or porters + guide thereafter
@@ -218,10 +218,11 @@ func doSeekFollowers(s *GameState) *EventResult {
 			count := Roll1d6()
 			for i := 0; i < count; i++ {
 				name := fmt.Sprintf("Porter %d", i+1)
-				f := Character{Name: name, Type: TypeGeneric, CombatSkill: 1, MaxEndurance: 2, DailyWage: 1, Morale: 3}
+				// Porters carry 5 units of food/gold each (informational)
+				f := Character{Name: name, Type: TypeGeneric, CombatSkill: 1, MaxEndurance: 2, DailyWage: 1, Morale: 3, MaxMorale: 3, LoadCapacity: 5}
 				s.AddFollower(f)
 			}
-			guide := Character{Name: "Guide", Type: TypeGuide, CombatSkill: 2, MaxEndurance: 3, DailyWage: 2, IsGuide: true, Morale: 4}
+			guide := Character{Name: "Guide", Type: TypeGuide, CombatSkill: 2, MaxEndurance: 3, DailyWage: 2, IsGuide: true, Morale: 4, MaxMorale: 4}
 			s.AddFollower(guide)
 			result = EventResult{Messages: []string{fmt.Sprintf("%d porter(s) at 1 gold/day + a guide at 2 gold/day join you.", count)}}
 		}

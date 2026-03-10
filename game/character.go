@@ -72,6 +72,8 @@ type Character struct {
 	MustDesert     bool  // flagged for desertion
 	DaysHired      int   // how many days hired for
 	Morale         int   // 1-6, lower = deserts sooner
+	MaxMorale      int   // starting morale cap; recovered toward this value each week
+	LoadCapacity   int   // units of food/gold this follower can carry (porters: 5, others: 0)
 	IsUndead         bool // true for undead enemies (affected by Holy Symbol)
 	PlagueDustActive bool // r227: deals wounds daily until recovery roll (1d6 >= 4)
 }

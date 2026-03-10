@@ -156,10 +156,10 @@ Interactive guided introduction for new players. Runs before the main game (or c
 - Prince unconscious: True Love guarantees rescue with no roll
 - Met via seek-news (roll 11) or seek-followers (roll 12), one-shot per game (e195)
 
-### 🔲 Full Follower Economy
-- Porter load tracking (each porter carries N food/gold units)
-- Lancer daily tracking (separate mount food cost)
-- Morale system: followers check morale weekly based on food, pay, wounds
+### ✅ Full Follower Economy
+- **Morale weekly drift**: each week, starvation lowers morale, clean conditions recover it toward MaxMorale; morale 0 = desertion. True love unaffected.
+- **Porter load capacity**: porters carry 5 units each (informational, shown in [W] party view)
+- **Lancer mount food**: already tracked via `DailyFoodNeeded()` — 2 food/mount in rough terrain, free in open terrain
 
 ### 🔲 Magic Items (Complex State)
 - Alcove of Sending, Arch of Travel, Gateway to Darkness, Mirror of Reversal

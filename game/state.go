@@ -485,6 +485,49 @@ func AdvanceDay(s *GameState) {
 		s.Party = append(s.Party[:idx], s.Party[idx+1:]...)
 	}
 
+	// Weekly morale drift — fires at the start of each new week.
+	// Good conditions recover morale toward MaxMorale; starvation or serious
+	// wounds lower it. A follower whose morale hits 0 deserts.
+	if s.DayOfWeek == 1 && len(s.Party) > 0 {
+		var moraleDeserters []int
+		for i := range s.Party {
+			f := &s.Party[i]
+			if f.IsTrueLove {
+				continue // true love is unaffected by morale drift
+			}
+			prevMorale := f.Morale
+			if f.StarvationDays > 0 {
+				f.Morale--
+			}
+			if f.Wounds > 0 && f.Wounds >= f.MaxEndurance/2 {
+				// Seriously wounded followers lose heart
+				f.Morale--
+			}
+			// Recovery: if not starving and morale below cap, slowly improve
+			if f.StarvationDays == 0 && f.Wounds == 0 {
+				cap := f.MaxMorale
+				if cap == 0 {
+					cap = 5 // sensible default for followers hired before this change
+				}
+				if f.Morale < cap {
+					f.Morale++
+				}
+			}
+			if f.Morale != prevMorale {
+				s.AddLog(fmt.Sprintf("%s morale %s (%d/6).", f.Name,
+					moraleDir(prevMorale, f.Morale), f.Morale))
+			}
+			if f.Morale <= 0 {
+				moraleDeserters = append(moraleDeserters, i)
+				s.AddLog(fmt.Sprintf("%s has lost all will to continue and leaves your service.", f.Name))
+			}
+		}
+		for i := len(moraleDeserters) - 1; i >= 0; i-- {
+			idx := moraleDeserters[i]
+			s.Party = append(s.Party[:idx], s.Party[idx+1:]...)
+		}
+	}
+
 	// Plague dust (r227): deal wounds daily until recovery roll (1d6 >= 4)
 	if s.Prince.PlagueDustActive {
 		wounds := (Roll1d6() + 1) / 2 // 1d6/2 round up
@@ -533,6 +576,24 @@ func AdvanceDay(s *GameState) {
 		s.LoseReason = reason
 		return
 	}
+}
+
+// moraleDir returns a short direction string for morale change messages.
+func moraleDir(prev, cur int) string {
+	if cur > prev {
+		return "improves"
+	}
+	return "drops"
+}
+
+// TotalCarryCapacity returns the sum of all followers' LoadCapacity values.
+// This is informational — it represents extra carrying capacity from porters.
+func (s *GameState) TotalCarryCapacity() int {
+	total := 0
+	for _, f := range s.Party {
+		total += f.LoadCapacity
+	}
+	return total
 }
 
 // HasGuide returns true if any follower is a guide

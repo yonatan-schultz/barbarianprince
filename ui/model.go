@@ -294,10 +294,17 @@ func (m Model) handleActionKey(key string) (tea.Model, tea.Cmd) {
 			if f.DailyWage > 0 {
 				wage = fmt.Sprintf(" wage:%dg/day", f.DailyWage)
 			}
-			s.AddLog(fmt.Sprintf("  %s — CS:%d  HP:%d/%d  Morale:%d%s%s",
+			carry := ""
+			if f.LoadCapacity > 0 {
+				carry = fmt.Sprintf(" carry:%d", f.LoadCapacity)
+			}
+			s.AddLog(fmt.Sprintf("  %s — CS:%d  HP:%d/%d  Morale:%d/6%s%s%s",
 				f.Name, f.EffectiveCombatSkill(),
 				f.CurrentEndurance(), f.MaxEndurance,
-				f.Morale, mount, wage))
+				f.Morale, mount, wage, carry))
+		}
+		if cap := s.TotalCarryCapacity(); cap > 0 {
+			s.AddLog(fmt.Sprintf("  Party carry capacity: %d units", cap))
 		}
 
 	case "?":
