@@ -130,11 +130,10 @@ Interactive guided introduction for new players. Runs before the main game (or c
 - New action visible only when on a river-boundary hex carrying `PossRaft`
 
 ### 🔲 Flat-Top Hex Map Rendering
-- The real BP map uses **flat-top hexes** (⬡): flat N and S sides, 6 neighbors N/NE/SE/S/SW/NW, no E/W
-- Our direction system is already correct; only the visual renderer uses a square grid
-- `RenderMapGrid` needs a rewrite to stagger columns: odd columns displayed half a row lower than even columns (2 display lines per hex row)
-- Requires verifying the actual map data in `map.go` matches the original game before investing in a pixel-accurate renderer
-- **Dependency**: Map Data Verification (below) should come first
+- The direction system (N/NE/SE/S/SW/NW) is already flat-top correct; only the visual renderer uses a square grid
+- A 5×3 cell prototype was tried (5 chars wide, 3 lines tall, even columns staggered down 1 line, `=`/`~` on edges for roads/rivers) — the output was too noisy to be useful at terminal scale; backed out
+- A future attempt would need either significantly larger cells (9×5+) requiring a wide terminal, or a rethink of the information encoding
+- **Dependency**: Map Data Verification should come first anyway
 
 ### 🔲 Map Data Verification
 - Our `map.go` has 25×24 hexes but the original BP map is 20 columns × 23 rows (CCRR hex numbering 0101–2023)
