@@ -209,7 +209,17 @@ func SpecialPossessionRoll(wealthCode int) PossessionType {
 	// Higher wealth codes have better chances
 	threshold := 7 - wealthCode
 	if roll >= threshold {
-		// Roll for which item
+		// On a second roll of 6, yield a rare magic item instead of a common one
+		if Roll1d6() == 6 {
+			rareItems := []PossessionType{
+				PossAlcoveOfSending,
+				PossArchOfTravel,
+				PossGatewayToDarkness,
+				PossMirrorOfReversal,
+			}
+			return rareItems[Roll1d6()%len(rareItems)]
+		}
+		// Roll for which common item
 		itemRoll := Roll1d6()
 		items := []PossessionType{
 			PossRingOfCommand,

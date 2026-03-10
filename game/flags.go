@@ -21,6 +21,7 @@ type GlobalFlags struct {
 	StaffQuestDays      int  // days remaining in staff quest
 	PegasusCaptured     bool
 	TrueLoveMet         bool // true love companion has joined the party
+	SentGold            int  // gold stored in the Alcove of Sending
 	DragonSlain         map[HexID]bool
 	WizardsTowerVisited map[HexID]bool
 	SecretFound         map[string]bool

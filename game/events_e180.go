@@ -270,4 +270,86 @@ func registerEventsE180() {
 			Note: fmt.Sprintf("%s joined at %s (day %d). True Love: never deserts, +1 W&W, guarantees rescue.", name, s.CurrentHex, s.Day),
 		}
 	})
+
+	// e196 - Alcove of Sending
+	RegisterEvent("e196", func(s *GameState, ctx EventContext) EventResult {
+		if !s.Prince.HasPossession(PossAlcoveOfSending) {
+			s.Prince.AddPossession(PossAlcoveOfSending)
+			return EventResult{
+				Messages: []string{
+					"Built into the wall is a shimmering alcove carved with sending-runes.",
+					"Alcove of Sending: Deposit gold for safekeeping; withdraw it any time.",
+				},
+			}
+		}
+		gold := Roll2d6() * 10
+		return EventResult{
+			Messages:   []string{fmt.Sprintf("The magical alcove holds %d gold abandoned by a previous traveller.", gold)},
+			GoldChange: gold,
+		}
+	})
+
+	// e197 - Arch of Travel
+	RegisterEvent("e197", func(s *GameState, ctx EventContext) EventResult {
+		if !s.Prince.HasPossession(PossArchOfTravel) {
+			s.Prince.AddPossession(PossArchOfTravel)
+			return EventResult{
+				Messages: []string{
+					"A stone archway crackles with teleportation magic!",
+					"Arch of Travel: One-use item — teleport instantly to any major settlement.",
+				},
+			}
+		}
+		gold := TreasureRoll(5, Roll1d6())
+		return EventResult{
+			Messages:   []string{fmt.Sprintf("Magical residue in the arch — worth %d gold to an enchanter.", gold)},
+			GoldChange: gold,
+		}
+	})
+
+	// e198 - Gateway to Darkness
+	RegisterEvent("e198", func(s *GameState, ctx EventContext) EventResult {
+		if !s.Prince.HasPossession(PossGatewayToDarkness) {
+			s.Prince.AddPossession(PossGatewayToDarkness)
+			return EventResult{
+				Messages: []string{
+					"A dark portal hums with baleful energy. A daemon waits on the other side.",
+					"Gateway to Darkness: Step through to face the Daemon and claim its hoard.",
+					"Warning: The Daemon is powerful. The gateway is consumed when used.",
+				},
+			}
+		}
+		gold := TreasureRoll(4, Roll1d6())
+		return EventResult{
+			Messages:   []string{fmt.Sprintf("Dark crystal fragments from a sealed gateway — worth %d gold.", gold)},
+			GoldChange: gold,
+		}
+	})
+
+	// e199 - Mirror of Reversal
+	RegisterEvent("e199", func(s *GameState, ctx EventContext) EventResult {
+		if !s.Prince.HasPossession(PossMirrorOfReversal) {
+			s.Prince.AddPossession(PossMirrorOfReversal)
+			return EventResult{
+				Messages: []string{
+					"A silver mirror inscribed with reversal runes leans against the wall.",
+					"Mirror of Reversal: One-use item — instantly heals all your wounds.",
+				},
+			}
+		}
+		// Already have one — use it immediately
+		healed := s.Prince.Wounds + s.Prince.PoisonWounds
+		if healed > 0 {
+			s.Prince.Wounds = 0
+			s.Prince.PoisonWounds = 0
+			return EventResult{
+				Messages: []string{fmt.Sprintf("A second mirror shatters as you touch it, reversing your %d wound(s)!", healed)},
+			}
+		}
+		gold := TreasureRoll(3, Roll1d6())
+		return EventResult{
+			Messages:   []string{fmt.Sprintf("A cracked mirror. Worth %d gold as scrap silver.", gold)},
+			GoldChange: gold,
+		}
+	})
 }

@@ -415,7 +415,10 @@ func doSearchCache(s *GameState) {
 func doUseItem(s *GameState) *EventResult {
 	// Build a list of usable items the prince currently holds
 	var usable []PossessionType
-	for _, p := range []PossessionType{PossHealingPotion, PossPoisonAntidote} {
+	for _, p := range []PossessionType{
+		PossHealingPotion, PossPoisonAntidote,
+		PossAlcoveOfSending, PossArchOfTravel, PossGatewayToDarkness, PossMirrorOfReversal,
+	} {
 		if s.Prince.HasPossession(p) {
 			usable = append(usable, p)
 		}
@@ -435,9 +438,9 @@ func doUseItem(s *GameState) *EventResult {
 			return EventResult{Messages: []string{"Nothing happens."}}
 		}
 		item := usable[choice]
-		gs.Prince.RemovePossession(item)
 		switch item {
 		case PossHealingPotion:
+			gs.Prince.RemovePossession(item)
 			healed := Roll1d6()
 			if healed > gs.Prince.Wounds {
 				healed = gs.Prince.Wounds
@@ -445,8 +448,31 @@ func doUseItem(s *GameState) *EventResult {
 			gs.Prince.Wounds -= healed
 			return EventResult{Messages: []string{fmt.Sprintf("You drink the Healing Potion and recover %d wound(s).", healed)}}
 		case PossPoisonAntidote:
+			gs.Prince.RemovePossession(item)
 			gs.Prince.PoisonWounds = 0
 			return EventResult{Messages: []string{"You drink the Poison Antidote. The poison is purged from your body!"}}
+		case PossAlcoveOfSending:
+			return useAlcoveOfSending(gs)
+		case PossArchOfTravel:
+			return useArchOfTravel(gs)
+		case PossGatewayToDarkness:
+			return useGatewayToDarkness(gs)
+		case PossMirrorOfReversal:
+			gs.Prince.RemovePossession(item)
+			healed := gs.Prince.Wounds + gs.Prince.PoisonWounds
+			gs.Prince.Wounds = 0
+			gs.Prince.PoisonWounds = 0
+			if healed > 0 {
+				return EventResult{Messages: []string{
+					"You gaze into the Mirror of Reversal.",
+					fmt.Sprintf("The mirror shatters, reversing all %d wound(s) inflicted upon you!", healed),
+					"You are fully restored.",
+				}}
+			}
+			return EventResult{Messages: []string{
+				"You gaze into the Mirror of Reversal.",
+				"The mirror shatters — but you are already unhurt. Nothing changes.",
+			}}
 		}
 		return EventResult{Messages: []string{"Nothing happens."}}
 	}
@@ -459,6 +485,132 @@ func doUseItem(s *GameState) *EventResult {
 	}
 	s.AddLog("Choose an item to use:")
 	return &result
+}
+
+// useAlcoveOfSending returns a nested-choice result for deposit/withdraw.
+func useAlcoveOfSending(gs *GameState) EventResult {
+	stored := gs.Flags.SentGold
+	choices := []string{
+		fmt.Sprintf("Deposit all gold (%d gp)", gs.Gold),
+		fmt.Sprintf("Withdraw stored gold (%d gp)", stored),
+		"Cancel",
+	}
+	nestedHandler := func(gs2 *GameState, choice int) EventResult {
+		switch choice {
+		case 0: // deposit
+			if gs2.Gold <= 0 {
+				return EventResult{Messages: []string{"You have no gold to deposit."}}
+			}
+			amount := gs2.Gold
+			gs2.Flags.SentGold += amount
+			gs2.Gold = 0
+			return EventResult{Messages: []string{
+				fmt.Sprintf("You place %d gold into the Alcove of Sending.", amount),
+				fmt.Sprintf("The alcove shimmers and the gold vanishes. Stored: %d gp.", gs2.Flags.SentGold),
+			}}
+		case 1: // withdraw
+			if gs2.Flags.SentGold <= 0 {
+				return EventResult{Messages: []string{"The Alcove holds no gold."}}
+			}
+			amount := gs2.Flags.SentGold
+			gs2.Gold += amount
+			gs2.Flags.SentGold = 0
+			return EventResult{Messages: []string{
+				fmt.Sprintf("The Alcove releases %d gold into your hands.", amount),
+				fmt.Sprintf("Total gold: %d.", gs2.Gold),
+			}}
+		default:
+			return EventResult{Messages: []string{"You decide not to use the Alcove."}}
+		}
+	}
+	return EventResult{
+		Messages:      []string{fmt.Sprintf("The Alcove of Sending shimmers. (Stored: %d gp)", stored)},
+		Choices:       choices,
+		ChoiceHandler: nestedHandler,
+	}
+}
+
+// archOfTravelDestinations lists teleport destinations for the Arch of Travel.
+var archOfTravelDestinations = []struct {
+	Name string
+	Hex  HexID
+}{
+	{"Ogon (north)", NewHexID(1, 1)},
+	{"Weshor (northeast)", NewHexID(15, 1)},
+	{"Cawther (central)", NewHexID(9, 9)},
+	{"Galden (southwest)", NewHexID(1, 16)},
+	{"Brigud (south)", NewHexID(8, 19)},
+	{"Halowich (far south)", NewHexID(3, 20)},
+}
+
+// useArchOfTravel returns a choice result for teleportation.
+func useArchOfTravel(gs *GameState) EventResult {
+	choices := make([]string, len(archOfTravelDestinations))
+	for i, d := range archOfTravelDestinations {
+		choices[i] = d.Name
+	}
+	handler := func(gs2 *GameState, choice int) EventResult {
+		if choice < 0 || choice >= len(archOfTravelDestinations) {
+			return EventResult{Messages: []string{"The Arch fades without transporting you."}}
+		}
+		dest := archOfTravelDestinations[choice]
+		gs2.Prince.RemovePossession(PossArchOfTravel)
+		gs2.CurrentHex = dest.Hex
+		gs2.VisitedHexes[dest.Hex] = true
+		return EventResult{Messages: []string{
+			fmt.Sprintf("You step through the Arch of Travel!"),
+			fmt.Sprintf("In an instant you stand in %s.", dest.Name),
+			"The Arch crumbles behind you — it may only be used once.",
+		}}
+	}
+	return EventResult{
+		Messages:      []string{"The Arch of Travel blazes with arcane light. Choose your destination:"},
+		Choices:       choices,
+		ChoiceHandler: handler,
+	}
+}
+
+// useGatewayToDarkness returns a choice result for the dangerous gateway encounter.
+func useGatewayToDarkness(gs *GameState) EventResult {
+	choices := []string{
+		"Step through — face the Daemon",
+		"Seal the gateway (do nothing)",
+	}
+	handler := func(gs2 *GameState, choice int) EventResult {
+		if choice != 0 {
+			gs2.Prince.RemovePossession(PossGatewayToDarkness)
+			return EventResult{Messages: []string{
+				"You press your hands against the Gateway. Dark light bleeds out, then fades.",
+				"The Gateway to Darkness is sealed forever.",
+			}}
+		}
+		gs2.Prince.RemovePossession(PossGatewayToDarkness)
+		daemon := &Character{
+			Name:         "Daemon of the Void",
+			CombatSkill:  8,
+			MaxEndurance: 10,
+			WealthCode:   7,
+			IsUndead:     true,
+		}
+		return EventResult{
+			Messages: []string{
+				"You step through the shimmering portal!",
+				"A Daemon of the Void materialises, its eyes blazing with cold fire.",
+				"Defeat it to claim its vast hoard!",
+			},
+			CombatTriggered: true,
+			Enemy:           daemon,
+			PlayerAttFirst:  false,
+		}
+	}
+	return EventResult{
+		Messages: []string{
+			"The Gateway to Darkness pulses with baleful energy.",
+			"Beyond lies a daemon and its treasure hoard (300 gold if victorious).",
+		},
+		Choices:       choices,
+		ChoiceHandler: handler,
+	}
 }
 
 // HideCacheHere creates a cache at the current location

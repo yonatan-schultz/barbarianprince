@@ -49,6 +49,10 @@ const (
 	PossMap                           // reveals adjacent hexes
 	PossRaft                          // river travel
 	PossGoldenCrown                   // royal helm substitute
+	PossAlcoveOfSending               // deposit/withdraw gold magically
+	PossArchOfTravel                  // one-use teleport to any major settlement
+	PossGatewayToDarkness             // one-use: face the Daemon for great reward
+	PossMirrorOfReversal              // one-use: fully heal all wounds
 )
 
 // Character represents the prince or a follower
@@ -207,6 +211,14 @@ func PossessionName(p PossessionType) string {
 		return "Raft"
 	case PossGoldenCrown:
 		return "Golden Crown"
+	case PossAlcoveOfSending:
+		return "Alcove of Sending"
+	case PossArchOfTravel:
+		return "Arch of Travel"
+	case PossGatewayToDarkness:
+		return "Gateway to Darkness"
+	case PossMirrorOfReversal:
+		return "Mirror of Reversal"
 	}
 	return "Unknown Item"
 }

@@ -161,9 +161,13 @@ Interactive guided introduction for new players. Runs before the main game (or c
 - **Porter load capacity**: porters carry 5 units each (informational, shown in [W] party view)
 - **Lancer mount food**: already tracked via `DailyFoodNeeded()` — 2 food/mount in rough terrain, free in open terrain
 
-### 🔲 Magic Items (Complex State)
-- Alcove of Sending, Arch of Travel, Gateway to Darkness, Mirror of Reversal
-- Require multi-turn state and new UI flows
+### ✅ Magic Items (Complex State)
+- **Alcove of Sending**: Deposit/withdraw gold from magical stasis (`Flags.SentGold`); reusable
+- **Arch of Travel**: One-use teleport to 6 major settlements (choice list, no day cost)
+- **Gateway to Darkness**: One-use; face Daemon of the Void (CS 8, E 10, WC 7) for large hoard
+- **Mirror of Reversal**: One-use; instantly heals all wounds + poison wounds
+- Found via ruins `SpecialPossessionRoll` (rare 1-in-6 chance) or events e196–e199
+- All 4 use `Choices + ChoiceHandler` (nested for Alcove/Arch/Gateway); wired into `doUseItem [U]`
 
 ### ✅ Test Coverage Expansion
 **71.0%** (was 58.7%). Covers: difficulty modes, win/lose conditions, tutorial state, character edge cases, AdvanceDay wage/starvation/escapee paths, rest/heal/poison, BuyRaft, PayLodging, SeekNews/Followers guards, cache, action strings, turn phases, possession names.
