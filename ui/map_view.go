@@ -85,27 +85,15 @@ func RenderMap(state *game.GameState, width, height int, highlightHex ...game.He
 	}
 	rows = append(rows, hdr.String())
 
-	riverStyle := lipgloss.NewStyle().Foreground(colorRiver)
-
 	for row := startRow; row < startRow+hexRows && row <= mapRows; row++ {
 		var line strings.Builder
 		line.WriteString(StyleLabel.Render(fmt.Sprintf("%2d ", row)))
 		for col := startCol; col < startCol+hexCols && col <= mapCols; col++ {
 			id := game.NewHexID(col, row)
-			cell := renderCell(state, id, highlight, riverStyle)
+			cell := renderCell(state, id, highlight)
 			line.WriteString(cell)
 		}
 		rows = append(rows, line.String())
-
-		// Tragoth River: horizontal separator between rows 2 and 3
-		if row == game.TragotheRow-1 {
-			var sep strings.Builder
-			sep.WriteString("   ")
-			for col := startCol; col < startCol+hexCols && col <= mapCols; col++ {
-				sep.WriteString(riverStyle.Render("~~~~"))
-			}
-			rows = append(rows, sep.String())
-		}
 	}
 
 	// Hex info line at the bottom when a travel target is highlighted.
@@ -175,7 +163,7 @@ func hexInfoLine(id game.HexID) string {
 }
 
 // renderCell returns a cellWidth-wide styled string for one hex.
-func renderCell(state *game.GameState, id game.HexID, highlight game.HexID, riverStyle lipgloss.Style) string {
+func renderCell(state *game.GameState, id game.HexID, highlight game.HexID) string {
 	hex := game.GetHex(id)
 	if hex == nil {
 		return "    "
@@ -235,18 +223,7 @@ func renderCell(state *game.GameState, id game.HexID, highlight game.HexID, rive
 		styled = lipgloss.NewStyle().Foreground(TerrainColor(int(hex.Terrain))).Faint(true).Render(content)
 	}
 
-	// East-side separator: river "~" takes priority over road "="
-	sep := " "
-	hasEastRiver := hex.RiverSides[game.DirNE] || hex.RiverSides[game.DirSE] ||
-		hex.RiverSides[game.DirNW] || hex.RiverSides[game.DirSW]
-	hasEastRoad := hex.RoadSides[game.DirNE] || hex.RoadSides[game.DirSE] ||
-		hex.RoadSides[game.DirNW] || hex.RoadSides[game.DirSW]
-	if hasEastRiver {
-		sep = riverStyle.Render("~")
-	} else if hasEastRoad {
-		sep = lipgloss.NewStyle().Foreground(colorRoad).Render("=")
-	}
-	return styled + sep
+	return styled + " "
 }
 
 func structSymbol(s game.StructureType) string {

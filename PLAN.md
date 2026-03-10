@@ -118,11 +118,10 @@ Interactive guided introduction for new players. Runs before the main game (or c
 - `[S]ave` and `[L]oad` options on the start menu and in-game pause menu
 - Single save slot for simplicity
 
-### ✅ River Rendering on Map
-- `initRiversAndRoads()` populates `RiverSides` on all world-map hexes
-- **Nesser River** (north-south, between cols 12–13): blue `~` separator in every row of RenderMapGrid
-- **Tragoth River** (east-west, between rows 11–12): thin `~~~~` blue band inserted between rows 11 and 12
-- `linesUsed` counter prevents the separator from exceeding `maxHeight`
+### 🔲 River/Road Map Rendering
+- River and road data is populated in `map.go` (`RiverSides`, `RoadSides`) and shown in the adjacent-hex list (`[road]`/`[bridge]`) and hex info bar
+- Visual `~`/`=` cell separators and the Tragoth `~~~~` row band were removed — they added noise without forming a readable pattern at 4-char cell widths
+- Future: revisit when implementing flat-top hex renderer (proper edge markings are natural there)
 
 ### 🔲 Raft Travel (downstream fast-travel)
 - **Blocking done** — river crossings now require `PossRaft`; raft wrecked on roll of 1
